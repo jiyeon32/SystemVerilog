@@ -6,7 +6,7 @@ class transaction;
     rand bit   [7:0] b;
     rand bit         mode;
     // monitor variable
-    logic [7:0] s;
+    logic [8:0] s;
     logic       c;
 
     function debug_print(string name);
@@ -18,22 +18,22 @@ endclass
 interface adder_interface ();
     logic [7:0] a, b;
     logic       mode;
-    logic [7:0] s;
+    logic [8:0] s;
     logic       c;
 endinterface
 
 
 class generator;
-    transaction tr;
+    transaction tr; //handle
 
-    mailbox #(transaction) gen2drv_mbox;
+    mailbox #(transaction) gen2drv_mbox; 
 
     function new(mailbox #(transaction) gen2drv_mbox_a);
         gen2drv_mbox = gen2drv_mbox_a;
     endfunction
 
     task run();
-        repeat (10) begin
+        repeat (256) begin
             tr = new;
             // to generate for randomize stimulus by tr
             tr.randomize();
@@ -45,7 +45,7 @@ endclass
 
 class driver;
     transaction tr;
-    mailbox #(transaction) gen2drv_mbox;
+    mailbox #(transaction) gen2drv_mbox; // 위에와 이름만 같음
 
     virtual adder_interface adder_if_v;
     function new(mailbox#(transaction) gen2drv_mbox_a,
@@ -91,7 +91,6 @@ endclass
 module tb_adder_sv ();
     adder_interface adder_if ();
     enviroment env;
-
 
     adder dut (
         .a   (adder_if.a),

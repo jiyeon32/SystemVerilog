@@ -4,7 +4,7 @@ module adder (
     input  logic [7:0] a,
     input  logic [7:0] b,
     input  logic       mode, // 0: add, 1: sub
-    output logic [7:0] s,
+    output logic [8:0] s,
     output logic       c
 
 );
