@@ -1,75 +1,74 @@
 `timescale 1ns / 1ps
 
-class transaction;  //class 로 만들어서 동적 할당을 함
-    //drive variable
-    //rand : randomize()시 rand key word 있는 변수만 random 값 생성
-    rand bit [7:0] a;
-    rand bit [7:0] b;
-    rand bit mode;
-    //monitor variable
+class transaction;
+    // drive variable
+    rand bit   [7:0] a;
+    rand bit   [7:0] b;
+    rand bit         mode;
+    // monitor variable
     logic [7:0] s;
-    logic c;
+    logic       c;
 
     function debug_print(string name);
-        $display("%t : [%s] a = %d,b = %d,mode = %d, s = %d, c = %d", $time,
-                 name, a, b, mode, s, c);
-
+        $display("%t : [%s] a = %d, b = %d, mode = %d, s = %d, c = %d", $time,
+                name,a,b,mode,s,c);
     endfunction
-endclass  // vector,stimulus 생성하는 객체
+endclass
+
 interface adder_interface ();
-    logic [7:0] a;
-    logic [7:0] b;
+    logic [7:0] a, b;
     logic       mode;
     logic [7:0] s;
     logic       c;
 endinterface
 
+
 class generator;
-    transaction tr;  //handle
+    transaction tr;
 
     mailbox #(transaction) gen2drv_mbox;
-    //generator 객체가 동적생성 될때 이걸 실행해라
-    function new(mailbox#(transaction) gen2drv_mbox_a);
-        //virtual mailbox #(tr..)... 이렇게 써도됨
+
+    function new(mailbox #(transaction) gen2drv_mbox_a);
         gen2drv_mbox = gen2drv_mbox_a;
     endfunction
 
     task run();
-        repeat (256) begin
-            tr = new;  // new 동적 할당 명령어 | 객체를 실제로 메모리에 생성하고 tr에 연결
-            //to generate for randomize stimulus by tr
-            tr.randomize();  // class 기본 제공 function
+        repeat (10) begin
+            tr = new;
+            // to generate for randomize stimulus by tr
+            tr.randomize();
             tr.debug_print("GEN");
             gen2drv_mbox.put(tr);
         end
     endtask
 endclass
 
-
 class driver;
-    transaction tr;  //handle
-    mailbox #(transaction) gen2drv_mbox;  // 위에와 이름만 같을뿐
+    transaction tr;
+    mailbox #(transaction) gen2drv_mbox;
+
     virtual adder_interface adder_if_v;
     function new(mailbox#(transaction) gen2drv_mbox_a,
-                 virtual adder_interface adder_if_v_a);
+                        virtual adder_interface adder_if_v_a);
         gen2drv_mbox = gen2drv_mbox_a;
-        adder_if_v   = adder_if_v_a;  //virtual connection
+        adder_if_v = adder_if_v_a; // virtual connection
     endfunction
 
     task run();
         forever begin
             gen2drv_mbox.get(tr);
             tr.debug_print("DRV");
-            //drive
+            // drive
             adder_if_v.a = tr.a;
             adder_if_v.b = tr.b;
-            adder_if_v.mode = tr.mode; // mode를 0만 넣고싶으면 여기서 0 넣음
+            adder_if_v.mode = tr.mode;
             #10;
         end
     endtask
 endclass
 
-class environment;
+
+class enviroment;
     generator gen;
     driver drv;
     mailbox #(transaction) gen2drv_mbox;
@@ -77,7 +76,7 @@ class environment;
     function new(virtual adder_interface adder_if_v);
         gen2drv_mbox = new;
         gen = new(gen2drv_mbox);
-        drv = new(gen2drv_mbox, adder_if_v);
+        drv = new(gen2drv_mbox,adder_if_v);
     endfunction
 
     task run();
@@ -90,17 +89,16 @@ endclass
 
 
 module tb_adder_sv ();
+    adder_interface adder_if ();
+    enviroment env;
 
-    adder_interface adder_if ();  //interface instance함
 
-    environment env;
     adder dut (
         .a   (adder_if.a),
         .b   (adder_if.b),
         .mode(adder_if.mode),
         .s   (adder_if.s),
         .c   (adder_if.c)
-        // .*  //포트이름과 변수이름이 같으면 자동 연결
     );
 
     initial begin
