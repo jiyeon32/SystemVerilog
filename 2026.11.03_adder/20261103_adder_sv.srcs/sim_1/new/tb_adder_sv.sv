@@ -74,7 +74,7 @@ class enviroment;
     mailbox #(transaction) gen2drv_mbox;
 
     function new(virtual adder_interface adder_if_v);
-        gen2drv_mbox = new;
+        gen2drv_mbox = new; 
         gen = new(gen2drv_mbox);
         drv = new(gen2drv_mbox,adder_if_v);
     endfunction
@@ -89,7 +89,7 @@ endclass
 
 
 module tb_adder_sv ();
-    adder_interface adder_if ();
+    adder_interface adder_if (); // interface instance
     enviroment env;
 
     adder dut (
