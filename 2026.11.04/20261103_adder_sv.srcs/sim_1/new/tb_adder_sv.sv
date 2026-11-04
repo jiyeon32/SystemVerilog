@@ -2,38 +2,38 @@
 
 class transaction;
     // drive variable
-    rand bit   [7:0] a;
-    rand bit   [7:0] b;
-    rand bit         mode;
+    rand bit [7:0] a;
+    rand bit [7:0] b;
+    rand bit       mode;
     // monitor variable
-    logic [8:0] s;
-    logic       c;
+    logic    [7:0] s;
+    logic          c;
 
     function debug_print(string name);
         $display("%t : [%s] a = %d, b = %d, mode = %d, s = %d, c = %d", $time,
-                name,a,b,mode,s,c);
+                 name, a, b, mode, s, c);
     endfunction
 endclass
 
 interface adder_interface ();
     logic [7:0] a, b;
     logic       mode;
-    logic [8:0] s;
+    logic [7:0] s;
     logic       c;
 endinterface
 
 
 class generator;
-    transaction tr; //handle
+    transaction tr;  //handle
 
-    mailbox #(transaction) gen2drv_mbox; 
+    mailbox #(transaction) gen2drv_mbox;
 
-    function new(mailbox #(transaction) gen2drv_mbox_a);
+    function new(mailbox#(transaction) gen2drv_mbox_a);
         gen2drv_mbox = gen2drv_mbox_a;
     endfunction
 
     task run();
-        repeat (256) begin
+        begin
             tr = new;
             // to generate for randomize stimulus by tr
             tr.randomize();
@@ -45,17 +45,19 @@ endclass
 
 class driver;
     transaction tr;
-    mailbox #(transaction) gen2drv_mbox; // 위에와 이름만 같음
-
+    event drv2mon_evt;
+    mailbox #(transaction) gen2drv_mbox;  // 위에와 이름만 같음
     virtual adder_interface adder_if_v;
-    function new(mailbox#(transaction) gen2drv_mbox_a,
-                        virtual adder_interface adder_if_v_a);
-        gen2drv_mbox = gen2drv_mbox_a;
-        adder_if_v = adder_if_v_a; // virtual connection
+
+    function new(mailbox#(transaction) gen2drv_mbox_a, event drv2mon_evt,
+                 virtual adder_interface adder_if_v_a);
+        this.gen2drv_mbox = gen2drv_mbox_a;  // mailbox
+        this.drv2mon_evt  = drv2mon_evt;  // event
+        this.adder_if_v   = adder_if_v_a;  // virtual connection
     endfunction
 
     task run();
-        forever begin
+        begin
             gen2drv_mbox.get(tr);
             tr.debug_print("DRV");
             // drive
@@ -63,30 +65,108 @@ class driver;
             adder_if_v.b = tr.b;
             adder_if_v.mode = tr.mode;
             #10;
+            ->drv2mon_evt;  // "->" event를 발생시켜라
         end
+    endtask
+endclass
+
+class monitor;
+    transaction tr;
+    mailbox #(transaction) mon2scb_mbox;
+    virtual adder_interface adder_if_v;
+    event drv2mon_evt;
+    function new(mailbox#(transaction) mon2scb_mbox, event drv2mon_evt,
+                 virtual adder_interface adder_if_v);
+        this.mon2scb_mbox = mon2scb_mbox;
+        this.drv2mon_evt  = drv2mon_evt;
+        this.adder_if_v   = adder_if_v;
+    endfunction
+
+    task run();
+        begin
+            // wait event
+            //@(drv2mon_evt);
+            // wait(drv2mon_evt); 
+            // generate transaction
+            tr = new;
+            tr.a = adder_if_v.a;
+            tr.b = adder_if_v.b;
+            tr.mode = adder_if_v.mode;
+            tr.s = adder_if_v.s;
+            tr.c = adder_if_v.c;
+            tr.debug_print("MON");
+            mon2scb_mbox.put(tr);
+        end
+    endtask
+endclass
+
+class scoreboard;
+    transaction tr;
+    mailbox #(transaction) mon2scb_mbox;    
+    // pass/fail
+    bit [7:0] expected_s;
+    bit expected_c;
+    int pass_cnt = 0, fail_cnt = 0;
+
+    function new(mailbox #(transaction) mon2scb_mbox);
+        this.mon2scb_mbox = mon2scb_mbox;
+    endfunction
+
+
+    task run();
+        // get transaction 
+        mon2scb_mbox.get(tr);
+        if(tr.mode) begin
+            {expected_c, expected_s} = tr.a - tr.b;
+        end else begin
+            {expected_c, expected_s} = tr.a + tr.b;
+        end
+        
+        // pass fail
+        if({expected_c, expected_s} == {tr.c, tr.s}) begin
+            // pass
+            $display("pass");
+            pass_cnt ++;
+        end else begin
+            // fail
+            $display("fail");
+            fail_cnt ++;
+        end
+        tr.debug_print("SCB");
     endtask
 endclass
 
 
 class enviroment;
-    generator gen;
-    driver drv;
+    generator              gen;
+    driver                 drv;
+    monitor                mon;
+    scoreboard scb;
     mailbox #(transaction) gen2drv_mbox;
+    mailbox #(transaction) mon2scb_mbox;
+    event                  drv2mon_evt;
 
     function new(virtual adder_interface adder_if_v);
         gen2drv_mbox = new;
+        mon2scb_mbox = new;
         gen = new(gen2drv_mbox);
-        drv = new(gen2drv_mbox,adder_if_v);
+        drv = new(gen2drv_mbox, drv2mon_evt, adder_if_v);
+        mon = new(mon2scb_mbox, drv2mon_evt, adder_if_v);
+        scb = new(mon2scb_mbox);
     endfunction
 
     task run();
-        forever begin
+        repeat (10) begin
             gen.run();
             drv.run();
+            mon.run();
+            scb.run();
         end
+
+        $display ("pass count = %d", scb.pass_cnt);
+        $display ("fail count = %d", scb.fail_cnt);
     endtask
 endclass
-
 
 module tb_adder_sv ();
     adder_interface adder_if ();
