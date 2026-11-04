@@ -9,6 +9,22 @@ class transaction;
     logic    [7:0] s;
     logic          c;
 
+    // range constraint
+    constraint adder_limit {
+        a > 128;
+        b < 64;
+    }
+
+    //constraint adder_inside {a inside {[128:200]};}
+    constraint adder_inside {a inside {128,200,212,250};} //제약조건을 list로
+
+    constraint adder_distribute{
+        mode dist{              // 0이 80%확률로 나올때 1은 20%의 확률로 나와라
+            0:/80,             // :/ %개념 모두(80,20) 더해서 
+            1:/20
+            };
+    }
+
     function debug_print(string name);
         $display("%t : [%s] a = %d, b = %d, mode = %d, s = %d, c = %d", $time,
                  name, a, b, mode, s, c);
@@ -88,7 +104,7 @@ class monitor;
             //@(drv2mon_evt);
             // wait(drv2mon_evt); 
             // generate transaction
-            tr = new;
+            tr = new; // 이 내부(class moniotr)에서 선언한 tr
             tr.a = adder_if_v.a;
             tr.b = adder_if_v.b;
             tr.mode = adder_if_v.mode;
@@ -155,8 +171,8 @@ class enviroment;
         scb = new(mon2scb_mbox);
     endfunction
 
-    task run();
-        repeat (10) begin
+    task run(int run_count);
+        repeat (run_count) begin
             gen.run();
             drv.run();
             mon.run();
@@ -182,7 +198,7 @@ module tb_adder_sv ();
 
     initial begin
         env = new(adder_if);
-        env.run();
+        env.run(20);
         $finish;
     end
 
