@@ -171,6 +171,7 @@ class enviroment;
         scb = new(mon2scb_mbox);
     endfunction
 
+    // sequential control
     task run(int run_count);
         repeat (run_count) begin
             gen.run();
