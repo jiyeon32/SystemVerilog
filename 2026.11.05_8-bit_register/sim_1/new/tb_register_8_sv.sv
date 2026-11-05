@@ -15,7 +15,8 @@ class transaction;
     logic    [7:0] q;
 
     function debug_prin(string name);
-        $display("%t : [%s] reset = %d, d = %d, q = %d", $time, name, reset, d, q);
+        $display("%t : [%s] reset = %d, d = %d, q = %d", $time, name, reset, d,
+                 q);
     endfunction
 endclass
 
@@ -91,7 +92,7 @@ class monitor;
 
     task run();
         forever begin
-            tr   = new;
+            tr = new;
             @(mon_next_evt);
             tr.debug_prin("MON");
             @(posedge reg_vif.clk);
@@ -104,33 +105,36 @@ class monitor;
 endclass
 
 class scoreboard;
-    transaction                  tr;
-    mailbox #(transaction)       mon2scb_mbox;
-    event                        gen_next_evt;
+    transaction tr;
+    mailbox #(transaction) mon2scb_mbox;
+    event gen_next_evt;
 
-    logic                  [7:0] expected_d;  // for case compare
-    bit                          first_flag = 1;
-    ;
+    logic [7:0] expected_d;  // for case compare
+    bit first_flag = 1;
+    int pass_cnt = 0, fail_cnt = 0;
 
+    // build configuration
     function new(mailbox#(transaction) mon2scb_mbox, event gen_next_evt);
         this.mon2scb_mbox = mon2scb_mbox;
         this.gen_next_evt = gen_next_evt;
     endfunction
 
-    task run();
+    task run;
         forever begin
             // get mail box
-            tr = new;
             mon2scb_mbox.get(tr);
             tr.debug_prin("SCB");
+
             if (first_flag) begin
                 first_flag = 0;
             end else begin
                 // pass / fail
                 if (expected_d === tr.q) begin
                     $display("pass");
+                    pass_cnt ++;
                 end else begin
                     $display("fail");
+                    fail_cnt ++;
                 end
             end
             // store expevted_d = tr.d
@@ -173,8 +177,14 @@ class environment;
         join_any
         #10;
         // pass/fail count display
+        $display("***************************************");
+        $display("*** register 8bit verification test***");
+        $display("***************************************");
+        $display("*********** total test = %3d **********", run_count);
+       $display("***** 1st pass/fail decition skip ******");
+        $display("*********** pass_cnt = %3d ************", scb.pass_cnt);
+        $display("*********** fail_cnt = %3d ************", scb.fail_cnt);
         $display("end register 8bit verification program");
-
     endtask
 endclass
 
