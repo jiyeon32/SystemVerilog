@@ -36,7 +36,7 @@ class generator;
             tr = new;
             tr.randomize();
             gen2drv_mbox.put(tr);  // to driver
-            tr.debug_prin("GEN");
+            tr.debug_print("GEN");
             @(gen_next_evt);  // from scoreboard
         end
     endtask
