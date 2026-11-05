@@ -14,7 +14,7 @@ class transaction;
     rand bit [7:0] d;
     logic    [7:0] q;
 
-    function debug_prin(string name);
+    function debug_print(string name);
         $display("%t : [%s] reset = %d, d = %d, q = %d", $time, name, reset, d,
                  q);
     endfunction
@@ -67,9 +67,9 @@ class driver;
         forever begin
             @(posedge reg_vif.clk);
             gen2drv_mbox.get(tr);
-            tr.debug_prin("DRV - GET");
+            tr.debug_print("DRV - GET");
             #1;
-            tr.debug_prin("DRV - AFTER POSEDGE");
+            tr.debug_print("DRV - AFTER POSEDGE");
             reg_vif.reset = 0;
             reg_vif.d = tr.d;
             ->mon_next_evt;
@@ -94,11 +94,11 @@ class monitor;
         forever begin
             tr = new;
             @(mon_next_evt);
-            tr.debug_prin("MON");
+            tr.debug_print("MON");
             @(posedge reg_vif.clk);
             tr.d = reg_vif.d;
             tr.q = reg_vif.q;
-            tr.debug_prin("MON - AFTER POSEDGE");
+            tr.debug_print("MON - AFTER POSEDGE");
             mon2scb_mbox.put(tr);
         end
     endtask
@@ -123,7 +123,7 @@ class scoreboard;
         forever begin
             // get mail box
             mon2scb_mbox.get(tr);
-            tr.debug_prin("SCB");
+            tr.debug_print("SCB");
 
             if (first_flag) begin
                 first_flag = 0;
