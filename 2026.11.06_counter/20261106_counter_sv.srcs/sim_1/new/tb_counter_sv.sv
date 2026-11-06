@@ -7,12 +7,17 @@ class transaction;
     rand bit       clear;
     logic    [7:0] counter;
 
+    bit list[6] = '{0,0,0,1,1,1};
 
     function void debug_print(string name);
         $display(
             "%t : [%s] rst = %d, mode = %d, run_stop = %d, clear = %d, counter = %d",
             $time, name, rst, mode, run_stop, clear, counter);
     endfunction
+
+    /*constraint 3_cycle {
+
+    } */
 
 endclass
 
