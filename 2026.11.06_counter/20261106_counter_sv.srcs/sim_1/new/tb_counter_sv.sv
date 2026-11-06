@@ -14,12 +14,6 @@ class transaction;
             $time, name, rst, mode, run_stop, clear, counter);
     endfunction
 
-    constraint mode_dist {
-        mode dist  {
-            0:/9,
-            1:/1
-            };
-    }
 endclass
 
 interface counter_interface (
@@ -30,6 +24,15 @@ interface counter_interface (
     logic       run_stop;
     logic       clear;
     logic [7:0] counter;
+
+    property rst_zero;
+        @(posedge clk) rst |=> (counter == 8'd0);
+    endproperty
+
+    a_rst_zero : assert property(rst_zero)
+    else begin
+        $display (" [Interface] rst = %d counter value error !! %d", rst, counter);
+    end
 endinterface
 
 class generator;
@@ -48,7 +51,8 @@ class generator;
     task run();
         while (enable) begin
             tr          = new;
-            tr.randomize();
+            assert (tr.randomize())
+            else $display ("[GEN] tr.randomized error !!!");
             // mode = 0 upcount, run_stop = 1, clear = 0
             tr.rst      = 0;
             //tr.mode     = 0;
