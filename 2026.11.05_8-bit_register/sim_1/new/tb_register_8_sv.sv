@@ -65,9 +65,9 @@ class driver;
 
     task run();
         forever begin
-            @(posedge reg_vif.clk);
             gen2drv_mbox.get(tr);
             tr.debug_print("DRV - GET");
+            @(posedge reg_vif.clk);
             #1;
             tr.debug_print("DRV - AFTER POSEDGE");
             reg_vif.reset = 0;

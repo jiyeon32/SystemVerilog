@@ -7,7 +7,7 @@ class transaction;
     rand bit       clear;
     logic    [7:0] counter;
 
-    bit list[6] = '{0,0,0,1,1,1};
+    rand bit [2:0] length;
 
     function void debug_print(string name);
         $display(
@@ -15,9 +15,9 @@ class transaction;
             $time, name, rst, mode, run_stop, clear, counter);
     endfunction
 
-    /*constraint 3_cycle {
-
-    } */
+    constraint cycle_3 {
+        length > 2 && length <4;
+    }
 
 endclass
 
@@ -102,7 +102,10 @@ class driver;
             counter_vif.mode     = tr.mode;
             counter_vif.run_stop = tr.run_stop;
             counter_vif.clear    = tr.clear;
+            repeat (tr.length-1)
+             @(negedge counter_vif.clk);
             ->gen_next_evt;
+           
         end
     endtask
 
