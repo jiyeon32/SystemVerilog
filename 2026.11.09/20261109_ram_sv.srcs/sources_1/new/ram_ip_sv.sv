@@ -18,4 +18,4 @@ module ram_ip_sv (
 
     assign rdata = ram[addr];
 
-endmodule
+endmodule 
