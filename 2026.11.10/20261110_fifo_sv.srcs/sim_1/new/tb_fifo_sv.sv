@@ -180,24 +180,24 @@ endclass
 module tb_fifo_sv ();
 
     logic clk = 0;
-    fifo_interface fifo_vif (clk);
+    fifo_interface fifo_if (clk);
     environment env;
 
     fifo_sv dut (
         .clk      (clk),
-        .rst      (fifo_vif.rst),
-        .push_data(fifo_vif.push_data),
-        .push     (fifo_vif.push),
-        .pop      (fifo_vif.pop),
-        .pop_data (fifo_vif.pop_data),
-        .full     (fifo_vif.full),
-        .empty    (fifo_vif.empty)
+        .rst      (fifo_if.rst),
+        .push_data(fifo_if.push_data),
+        .push     (fifo_if.push),
+        .pop      (fifo_if.pop),
+        .pop_data (fifo_if.pop_data),
+        .full     (fifo_if.full),
+        .empty    (fifo_if.empty)
     );
 
     always #5 clk = ~clk;
 
     initial begin
-        env = new(fifo_vif);
+        env = new(fifo_if);
         env.run(10);
         $finish;
     end
