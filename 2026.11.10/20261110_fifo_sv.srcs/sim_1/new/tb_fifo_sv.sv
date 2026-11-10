@@ -13,7 +13,7 @@ interface fifo_interface (
 endinterface
 
 class transaction;
-    bit            rst;
+    rand bit            rst;
     rand bit [7:0] push_data;
     rand bit       push;
     rand bit       pop;
@@ -46,6 +46,31 @@ class generator;
             gen2drv_mbox.put(tr);
             @(gen_next_evt);
         end
+    endtask
+    
+
+    task fifo_1();
+        tr = new;
+        tr.randomize() with {rst == 1; push == 0; pop == 0; };
+        gen2drv_mbox.put(tr);
+        @(gen_next_evt);
+
+        repeat(3) begin
+            tr = new;
+            tr.randomize() with {rst == 0; push == 1; pop == 0; };
+            gen2drv_mbox.put(tr);
+            @(gen_next_evt);
+        end
+
+        tr = new;
+        tr.randomize() with {rst == 1; push == 0; pop == 0; };
+        gen2drv_mbox.put(tr);
+        @(gen_next_evt);
+
+        tr = new;
+        tr.randomize() with {rst == 0; push == 0; pop == 1; };
+        gen2drv_mbox.put(tr);
+        @(gen_next_evt);
     endtask
 endclass
 
@@ -119,6 +144,7 @@ class scoreboard;
 
     logic [7:0] expect_fifo[$:3];
     int total_count = 0, pass_count =  0, fail_count = 0;
+    int full_empty_pass_count = 0, full_empty_fail_count = 0; 
 
     task run();
         forever begin
@@ -126,6 +152,22 @@ class scoreboard;
             tr.debug_print("SCB");
             total_count ++;
             if(!tr.rst) begin
+                assert((expect_fifo.size() == 0) === tr.empty) begin
+                    full_empty_pass_count++;
+                    $display("empty_pass");
+                end else begin
+                        full_empty_fail_count++;
+                        $display("empty_fail");
+                    end
+
+                assert((expect_fifo.size() == 4) === tr.full) begin
+                    full_empty_pass_count++;
+                    $display("full_pass");
+                end else begin
+                        full_empty_fail_count++;
+                        $display("full_fail");
+                    end
+
                 if(!tr.full & tr.push) begin
                     expect_fifo.push_back(tr.push_data);
                 end
@@ -139,7 +181,11 @@ class scoreboard;
                         $display("fail");
                     end
                 end
-            end
+            end else begin
+                expect_fifo.delete();
+                assert (tr.empty & !tr.full)
+                else  $display("error");
+            end 
             -> gen_next_evt;
         end
     endtask
@@ -167,7 +213,7 @@ class environment;
     task run(int run_count);
         drv.preset();
         fork
-            gen.run(run_count);
+            gen.fifo_1();
             drv.run();
             mon.run();
             scb.run();
