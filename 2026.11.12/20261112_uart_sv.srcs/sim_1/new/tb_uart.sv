@@ -79,7 +79,7 @@ class driver;
 
             if (!uart_vif.tx_busy) begin
                 // interval
-                repeat (tr.interval) @(negedge uart_if.clk);
+                repeat (tr.interval) @(negedge uart_vif.clk);
                 uart_vif.rst     = 0;
                 uart_vif.start   = 1;
                 uart_vif.tx_data = tr.tx_data;
