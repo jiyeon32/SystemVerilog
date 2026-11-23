@@ -1,19 +1,19 @@
 `timescale 1ns / 1ps
 
 module ascii_decoder (
-    input            clk,
-    input            rst,
-    input            enable,
-    input      [7:0] ascii,
-    output reg       pop,
+    input  logic           clk,
+    input  logic           rst,
+    input  logic           enable,
+    input  logic     [7:0] ascii,
+    output logic           pop,
     //output reg [3:0] bin,
-    output reg run_stop,
-    output reg clear,
-    output reg mode
+    output logic run_stop,
+    output logic clear,
+    output logic mode
 );
-    reg [7:0] data_reg, data_next;
+    logic [7:0] data_reg, data_next;
 
-    always @(posedge clk, posedge rst) begin
+    always_ff @(posedge clk, posedge rst) begin
         if (rst) begin
             data_reg <= 0;
         end else begin
@@ -21,7 +21,7 @@ module ascii_decoder (
         end
     end
 
-    always @(*) begin
+    always_comb begin
         //bin = 4'h0;
         pop = 1'b0;
         run_stop = 1'b0;
@@ -56,7 +56,7 @@ module ascii_decoder (
                 8'h43, 8'h63: bin = 4'hC;
                 8'h44, 8'h64: bin = 4'hD;
                 8'h45, 8'h65: bin = 4'hE;
-                8'h46, 8'h52: bin = 4'hF; 
+                8'h46, 8'h66: bin = 4'hF; 
                 
             endcase
         end */

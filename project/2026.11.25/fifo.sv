@@ -2,27 +2,27 @@
 
 module fifo #(
     parameter DEPTH = 4,
-    A_BIT_WIDTH = $clog2(DEPTH),
-    D_BIT_WIDTH = 8
+    parameter A_BIT_WIDTH = $clog2(DEPTH),
+    parameter D_BIT_WIDTH = 8
 ) (
-    input                     clk,
-    input                     rst,
-    input                     push,
-    input                     pop,
-    input  [D_BIT_WIDTH -1:0] push_data,
-    output [D_BIT_WIDTH -1:0] pop_data,
-    output                    full,
-    output                    empty
+    input  logic                    clk,
+    input  logic                    rst,
+    input  logic                    push,
+    input  logic                    pop,
+    input  logic [D_BIT_WIDTH -1:0] push_data,
+    output logic [D_BIT_WIDTH -1:0] pop_data,
+    output logic                    full,
+    output logic                    empty
 );
 
-    wire [A_BIT_WIDTH-1:0] w_wptr, w_rptr;
+    logic [A_BIT_WIDTH-1:0] w_wptr, w_rptr;
 
     register_file #(
-        .DEPTH(DEPTH),
+        .DEPTH      (DEPTH),
         .D_BIT_WIDTH(D_BIT_WIDTH)
     ) U_REG_FILE (
         .clk  (clk),
-        .we   ((~full&push)),
+        .we   ((~full & push)),
         .wdata(push_data),
         .waddr(w_wptr),
         .raddr(w_rptr),
@@ -47,26 +47,25 @@ endmodule
 
 module register_file #(
     parameter DEPTH = 4,
-    A_BIT_BIT_WIDTH = $clog2(DEPTH),
-    D_BIT_WIDTH = 8
+    parameter A_BIT_WIDTH = $clog2(DEPTH),
+    parameter D_BIT_WIDTH = 8
 ) (
-    input                        clk,
-    input                        we,
-    input  [A_BIT_BIT_WIDTH-1:0] waddr,
-    input  [A_BIT_BIT_WIDTH-1:0] raddr,
-    output [    D_BIT_WIDTH-1:0] rdata,
-    input  [    D_BIT_WIDTH-1:0] wdata
+    input  logic                       clk,
+    input  logic                       we,
+    input  logic [A_BIT_WIDTH-1:0] waddr,
+    input  logic [A_BIT_WIDTH-1:0] raddr,
+    output logic [    D_BIT_WIDTH-1:0] rdata,
+    input  logic [    D_BIT_WIDTH-1:0] wdata
 );
 
     // ram
-    reg [D_BIT_WIDTH-1:0] register_file[0:DEPTH-1];
+    logic [D_BIT_WIDTH-1:0] register_file[0:DEPTH-1];
 
     //write SL
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (we) begin
             register_file[waddr] <= wdata;
         end
-
     end
 
     // read CL
@@ -76,28 +75,27 @@ endmodule
 module control_unit #(
     parameter A_BIT_WIDTH = 2
 ) (
-    input                       clk,
-    input                       rst,
-    input                       push,
-    input                       pop,
-    output [A_BIT_WIDTH -1 : 0] wptr,
-    output [A_BIT_WIDTH -1 : 0] rptr,
-    output                      full,
-    output                      empty
+    input  logic                      clk,
+    input  logic                      rst,
+    input  logic                      push,
+    input  logic                      pop,
+    output logic [A_BIT_WIDTH -1 : 0] wptr,
+    output logic [A_BIT_WIDTH -1 : 0] rptr,
+    output logic                      full,
+    output logic                      empty
 );
 
-    reg [A_BIT_WIDTH-1:0] wptr_reg, wptr_next;
-    reg [A_BIT_WIDTH-1:0] rptr_reg, rptr_next;
-
-    reg full_reg, full_next;
-    reg empty_reg, empty_next;
+    logic [A_BIT_WIDTH-1:0] wptr_reg, wptr_next;
+    logic [A_BIT_WIDTH-1:0] rptr_reg, rptr_next;
+    logic full_reg, full_next;
+    logic empty_reg, empty_next;
 
     assign wptr  = wptr_reg;
     assign rptr  = rptr_reg;
     assign full  = full_reg;
     assign empty = empty_reg;
 
-    always @(posedge clk, posedge rst) begin
+    always_ff @(posedge clk, posedge rst) begin
         if (rst) begin
             wptr_reg  <= 0;
             rptr_reg  <= 0;
@@ -112,23 +110,21 @@ module control_unit #(
     end
 
     //next, output
-    always @(*) begin
+    always_comb begin
         wptr_next  = wptr_reg;
         rptr_next  = rptr_reg;
         full_next  = full_reg;
         empty_next = empty_reg;
 
         // {,} concatenation operator
-        case ({
-            push, pop
-        })
+        case ({push, pop})
             2'b10: begin
                 // push only
                 if (!full_reg) begin
                     empty_next = 1'b0;
                     wptr_next  = wptr_reg + 1;
-                    if (wptr_next == rptr) begin
-                        full_next = 1;
+                    if (wptr_next == rptr_reg) begin
+                        full_next = 1'b1;
                     end
                 end
             end
@@ -139,7 +135,7 @@ module control_unit #(
                     full_next = 1'b0;
                     rptr_next = rptr_reg + 1;
                     if (rptr_next == wptr_reg) begin
-                        empty_next = 1;
+                        empty_next = 1'b1;
                     end
                 end
             end

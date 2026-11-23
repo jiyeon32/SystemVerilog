@@ -1,20 +1,20 @@
 `timescale 1ns / 1ps
 
 module uart_fifo_loopback (
-    input        clk,
-    input        rst,
-    input        fifo_rx_pop,
-    input        rx,           //from PC
-    output       tx,           //to PC
-    output [7:0] rx_pop_data,
-    output       rx_empty
+    input  logic       clk,
+    input  logic       rst,
+    input  logic       fifo_rx_pop,
+    input  logic       rx,           //from PC
+    output logic       tx,           //to PC
+    output logic [7:0] rx_pop_data,
+    output logic       rx_empty
 );
 
 
-    wire w_b_tick;
-    wire w_rx_done;
-    wire [7:0] w_rx_data, w_fifo_rx_pop_data, w_fifo_tx_pop_data;
-    wire w_fifo_tx_full, w_fifo_rx_empty, w_fifo_tx_empty, w_tx_busy;
+    logic w_b_tick;
+    logic w_rx_done;
+    logic [7:0] w_rx_data, w_fifo_rx_pop_data, w_fifo_tx_pop_data;
+    logic w_fifo_tx_full, w_fifo_rx_empty, w_fifo_tx_empty, w_tx_busy;
 
     assign rx_pop_data = w_fifo_rx_pop_data;
     assign rx_empty = ~w_fifo_rx_empty;
@@ -53,7 +53,7 @@ module uart_fifo_loopback (
     uart_tx U_UART_TX (
         .clk     (clk),
         .rst     (rst),
-        .tx_start(~w_fifo_tx_empty),
+        .start(~w_fifo_tx_empty),
         .tx_data (w_fifo_tx_pop_data),
         .b_tick  (w_b_tick),
         .tx      (tx),
@@ -69,16 +69,16 @@ module uart_fifo_loopback (
 endmodule
 
 module baud_tick_gen (
-    input clk,
-    input rst,
-    output reg b_tick
+    input  logic      clk,
+    input  logic      rst,
+    output logic      b_tick
 );
 
     // 100Mhz -> 9600hz + 16
     parameter F_COUNT = 100_000_000 / (9600 * 16);
-    reg [$clog2(F_COUNT)-1:0] counter_reg;
+    logic [$clog2(F_COUNT)-1:0] counter_reg;
 
-    always @(posedge clk, posedge rst) begin
+    always_ff @(posedge clk, posedge rst) begin
         if (rst) begin
             counter_reg <= 0;
             b_tick <= 1'b0;

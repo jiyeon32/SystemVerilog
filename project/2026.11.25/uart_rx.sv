@@ -37,6 +37,8 @@ module uart_rx(
             bit_cnt <= 3'b000;
             rx_done_reg <= 1'b0;
             data_reg <= 8'h00;
+            rx_data_reg <= 8'h00;
+
             
         end else begin
             c_state         <= n_state;
@@ -58,7 +60,7 @@ module uart_rx(
         bit_cnt_next = bit_cnt;
         data_next = data_reg;
         rx_done_next = rx_done_reg;
-
+        rx_data_next = rx_data_reg;
         rx_done_next    = 1'b0;
 
         case(c_state)

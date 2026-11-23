@@ -1,20 +1,20 @@
 `timescale 1ns / 1ps
 
 module uart_fifo_ascii (
-    input  clk,
-    input  rst,
-    input  rx,     
-    output tx,
-    output run_stop,
-    output clear,
-    output mode
+    input  logic clk,
+    input  logic rst,
+    input  logic rx,     
+    output logic tx,
+    output logic run_stop,
+    output logic clear,
+    output logic mode
     //output [3:0] fnd_com,
     //output [7:0] fnd_font
 );
 
-    wire [7:0] w_rx_pop_data;
-    wire [3:0] w_bin;
-    wire w_rx_empty, w_rx_pop;
+    logic [7:0] w_rx_pop_data;
+    logic [3:0] w_bin;
+    logic w_rx_empty, w_rx_pop;
 
     uart_fifo_loopback U_UART_FIFO_LOOPBACK (
         .clk        (clk),
