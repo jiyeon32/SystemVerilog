@@ -28,7 +28,7 @@ module uart_fifo_loopback (
         .rx_done(w_rx_done)
     );
 
-    fifo U_FIFO_RX (
+    fifo_sv U_FIFO_RX (
         .clk      (clk),
         .rst      (rst),
         .push     (w_rx_done),
@@ -39,7 +39,7 @@ module uart_fifo_loopback (
         .empty    (w_fifo_rx_empty)
     );
 
-    fifo U_FIFO_TX (
+    fifo_sv U_FIFO_TX (
         .clk      (clk),
         .rst      (rst),
         .push     (~w_fifo_rx_empty),

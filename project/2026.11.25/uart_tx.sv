@@ -1,134 +1,107 @@
+`timescale 1ns / 1ps
 
-module uart_tx(
-    input clk,
-    input rst,
-    input tx_start,
-    input [7:0] tx_data,
-    input b_tick,
-    output tx,
-    output tx_busy
+module uart_tx (
+    input  logic       clk,
+    input  logic       rst,
+    input  logic       start,
+    input  logic [7:0] tx_data,
+    input  logic       b_tick,
+    output logic       tx,
+    output logic       tx_busy
 );
+    // enumeration by state.
+    typedef enum logic [1:0] {
+        IDLE,
+        START,
+        DATA,
+        STOP
+    } state_e;
 
-    localparam [1:0] IDLE = 0, START = 1, DATA = 2, STOP = 3;
+    state_e c_state, n_state;
 
-    reg [1:0] c_state, n_state;
-    reg [2:0] bit_count_reg, bit_count_next;
-    reg [3:0] b_tick_cnt_reg, b_tick_cnt_next;
-    reg [7:0] data_reg, data_next;
-    reg tx_reg, tx_next;
-    reg tx_busy_reg, tx_busy_next;
+    logic [7:0] data_reg, data_next;
+    logic [2:0] bit_cnt_reg, bit_cnt_next;
+    logic [3:0] b_tick_cnt_reg, b_tick_cnt_next;
+    logic tx_next, tx_busy_next;
 
-    assign tx = tx_reg;
-    assign tx_busy = tx_busy_reg;
-
-    always @(posedge clk, posedge rst) begin
-        if(rst) begin
-            c_state <= IDLE;
-            bit_count_reg <= 3'b0;
+    always_ff @(posedge clk, posedge rst) begin
+        if (rst) begin
+            c_state        <= IDLE;
+            tx             <= 1'b1;
+            tx_busy        <= 1'b0;
+            data_reg       <= 0;
+            bit_cnt_reg    <= 0;
             b_tick_cnt_reg <= 0;
-            data_reg <= 8'h0;
-            tx_reg <= 1'b1;
-            tx_busy_reg <= 1'b0; // no busy
         end else begin
-            c_state <= n_state;
-            bit_count_reg <= bit_count_next;
-            b_tick_cnt_reg <=b_tick_cnt_next;
-            data_reg <= data_next;
-            tx_reg <= tx_next;
-            tx_busy_reg <= tx_busy_next;
+            c_state        <= n_state;
+            tx             <= tx_next;
+            tx_busy        <= tx_busy_next;
+            data_reg       <= data_next;
+            bit_cnt_reg    <= bit_cnt_next;
+            b_tick_cnt_reg <= b_tick_cnt_next;
         end
     end
 
-    // next, output
-    always @(*) begin
-        n_state = c_state;
-        bit_count_next = bit_count_reg;
+    always_comb begin
+        n_state         = c_state;
+        tx_next         = tx;
+        tx_busy_next    = tx_busy;
+        data_next       = data_reg;
+        bit_cnt_next    = bit_cnt_reg;
         b_tick_cnt_next = b_tick_cnt_reg;
-        data_next = data_reg;
-        tx_next = tx_reg;
-        tx_busy_next = tx_busy_reg;
-
-        case(c_state)
-        IDLE : begin
-            tx_next = 1'b1;
-            tx_busy_next = 1'b0;
-            if(tx_start) begin
-                bit_count_next = 0;
-                b_tick_cnt_next = 0;
-                n_state = START;
-                data_next = tx_data;
-            end
-    
-        end
-
-        START : begin
-            tx_next = 1'b0;
-            tx_busy_next = 1'b1;
-            if(b_tick) begin
-                if(b_tick_cnt_reg == 15) begin
-                    n_state = DATA;
+        case (c_state)
+            IDLE: begin
+                tx_next = 1'b1;
+                tx_busy_next = 1'b0;
+                if (start) begin
+                    n_state = START;
+                    data_next = tx_data;
+                    bit_cnt_next = 0;
                     b_tick_cnt_next = 0;
-                end  else begin
-                    b_tick_cnt_next = b_tick_cnt_reg + 1;
+                    tx_busy_next = 1'b1;
                 end
             end
-        end
 
-        DATA : begin
-            tx_next = data_reg[0];
-            if(b_tick) begin
-                if(b_tick_cnt_reg == 15) begin
-                    b_tick_cnt_next = 0;
-                    if(bit_count_reg == 7) begin
-                        n_state = STOP;
+            START: begin
+                tx_next = 1'b0;
+                if (b_tick) begin
+                    if (b_tick_cnt_reg == 15) begin
+                        n_state = DATA;
+                        b_tick_cnt_next = 0;
                     end else begin
-                        data_next = {1'b0, data_reg[7:1]};
-                        bit_count_next = bit_count_reg + 1;
+                        b_tick_cnt_next = b_tick_cnt_reg + 1;
                     end
-                end else begin
-                    b_tick_cnt_next = b_tick_cnt_reg + 1;
                 end
             end
-        end
 
-        STOP : begin
-            tx_next = 1'b1;
-            if(b_tick) begin
-                if(b_tick_cnt_reg == 15) n_state = IDLE;
-                else b_tick_cnt_next = b_tick_cnt_reg + 1;
+            DATA: begin
+                tx_next = data_reg[0];
+                if (b_tick) begin
+                    if (b_tick_cnt_reg == 15) begin
+                        b_tick_cnt_next = 0;
+                        if (bit_cnt_reg == 7) begin
+                            n_state = STOP;
+                        end else begin
+                            bit_cnt_next = bit_cnt_reg + 1;
+                            data_next = {1'b0, data_reg[7:1]};
+                        end
+                    end else begin
+                        b_tick_cnt_next = b_tick_cnt_reg + 1;
+                    end
                 end
             end
-            default: ;
+
+            STOP: begin
+                tx_next = 1'b1;
+                if (b_tick) begin
+                    if (b_tick_cnt_reg == 15) begin
+                        tx_busy_next = 1'b0;
+                        n_state = IDLE;
+                    end else begin
+                        b_tick_cnt_next = b_tick_cnt_reg + 1;
+                    end
+                end
+            end
         endcase
     end
-
 endmodule
-
-
-
-/*module baud_tick_gen(
-    input clk,
-    input rst,
-    output reg b_tick
-);
-
-    // 100Mhz -> 9600hz
-    parameter F_COUNT = 100_000_000 / 9600;
-    reg [$clog2(F_COUNT)-1:0] counter_reg;
-
-    always @(posedge clk, posedge rst) begin
-        if(rst) begin
-            counter_reg <=0;
-            b_tick <=1'b0;
-        end else begin
-            counter_reg <=counter_reg + 1;
-
-            if(counter_reg == F_COUNT-1) begin
-                counter_reg <= 0;
-                b_tick <=1'b1;
-            end else begin
-                b_tick <= 1'b0;
-            end
-        end
-    end
-endmodule */
