@@ -15,13 +15,27 @@ endinterface
 // ============================================================
 // Transaction
 // ============================================================
+
+typedef enum {faster, normal, slower} mode_e;
+
 class uart_item extends uvm_sequence_item;
 	rand bit	[7:0] data;
 	rand bit	[9:0] interval;
-	logic			[7:0] rx_data;
-	logic						rst;
+	logic			[7:0]	rx_data;
+	bit							rst;
+	rand mode_e			mode;
+
+	constraint c_interval {
+		interval inside {[0:65]};
+	}
 
 	`uvm_object_utils_begin(uart_item)
+		`uvm_field_int	(data, UVM_ALL_ON)
+		`uvm_field_int	(interval, UVM_ALL_ON)
+		`uvm_field_int	(rx_data, UVM_ALL_ON)
+		`uvm_field_int	(rst, UVM_ALL_ON)
+		`uvm_field_enum	(mode_e, mode, UVM_ALL_ON)
+		
 	`uvm_object_utils_end
 
 	function new(string name = "uart_item");
@@ -32,19 +46,19 @@ endclass
 // ============================================================
 // Sequence
 // ============================================================
-class base_seq extends uvm_sequence #(base_item);
-	`uvm_object_utils(base_seq)
-	base_item seq_item;
+class uart_seq extends uvm_sequence #(uart_item);
+	`uvm_object_utils(uart_seq)
+	uart_item seq_item;
 
-	function new(string name = "base_seq");
+	function new(string name = "uart_seq");
 		super.new(name);
 	endfunction
 
 	task body();
 		repeat (1) begin
-			seq_item = base_item::type_id::create("seq_item");
+			seq_item = uart_item::type_id::create("seq_item");
 			start_item(seq_item);
-			if (!seq_item.randomize()) begin
+			if (!seq_item.randomize() with {mode == normal;}) begin
 				`uvm_fatal(get_name(), "randomize failed")
 			end
 			finish_item(seq_item);
